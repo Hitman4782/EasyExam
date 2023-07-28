@@ -2,7 +2,7 @@
   "expo": {
     "name": "EasyExam",
     "slug": "EasyExam",
-    "version": "1.0.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -27,6 +27,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "01190680-6fe8-4f1e-b395-b1c940ff2640"
+      }
     }
   }
 }

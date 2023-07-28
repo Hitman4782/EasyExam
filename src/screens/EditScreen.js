@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+
 import { firebase } from '../firebase/config';
 import { Picker } from '@react-native-picker/picker';
 
@@ -10,6 +11,8 @@ const EditScreen = ({ navigation }) => {
   const [rollNumber, setRollNumber] = useState('');
   const [Class, setClass] = useState('');
   const [pickerValue, setPickerValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
 
   useEffect(() => {
     const unsubscribe = firebase.auth().onAuthStateChanged((authUser) => {
@@ -47,6 +50,8 @@ const EditScreen = ({ navigation }) => {
   }, []);
 
   const handleSave = () => {
+    setIsLoading(true); // Set isLoading to true to show the activity indicator
+
     const userRef = firebase.firestore().collection('students').doc(user.uid);
     userRef
       .update({
@@ -55,12 +60,15 @@ const EditScreen = ({ navigation }) => {
         class: pickerValue, // Update with the selected picker value
       })
       .then(() => {
+        setIsLoading(false); // Set isLoading to false to hide the activity indicator
         Alert.alert('Success', 'User data updated successfully!, Please logout and log back in for changes to come in effect.');
       })
       .catch((error) => {
+        setIsLoading(false); // Set isLoading to false to hide the activity indicator
         console.error('Error updating user data:', error);
       });
   };
+
 
   return (
     <View style={styles.container}>
@@ -92,7 +100,11 @@ const EditScreen = ({ navigation }) => {
         </Picker>
       </View>
       <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Save Changes</Text>
+        {isLoading ? (
+          <ActivityIndicator color="#fff" /> // Show activity indicator when isLoading is true
+        ) : (
+          <Text style={styles.saveButtonText}>Save Changes</Text>
+        )}
       </TouchableOpacity>
     </View>
   );

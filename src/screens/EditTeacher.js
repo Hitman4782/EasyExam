@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import { firebase } from '../firebase/config';
 import { Picker } from '@react-native-picker/picker';
 
@@ -10,6 +10,8 @@ const EditTeacher = ({ navigation }) => {
     const [employeeNumber, setemployeeNumber] = useState('');
     const [subject, setsubject] = useState('');
     const [pickerValue, setPickerValue] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
 
     useEffect(() => {
         const unsubscribe = firebase.auth().onAuthStateChanged((authUser) => {
@@ -47,7 +49,8 @@ const EditTeacher = ({ navigation }) => {
     }, []);
 
     const handleSave = () => {
-        const userRef = firebase.firestore().collection('students').doc(user.uid);
+        setIsLoading(true); // Set isLoading to true to show the activity indicator
+        const userRef = firebase.firestore().collection('teachers').doc(user.uid);
         userRef
             .update({
                 fullName: fullName,
@@ -55,9 +58,11 @@ const EditTeacher = ({ navigation }) => {
                 subject: pickerValue, // Update with the selected picker value
             })
             .then(() => {
+                setIsLoading(false); // Set isLoading to false to hide the activity indicator
                 Alert.alert('Success', 'User data updated successfully!, Please logout and log back in for changes to come in effect.');
             })
             .catch((error) => {
+                setIsLoading(false); // Set isLoading to false to hide the activity indicator
                 console.error('Error updating user data:', error);
             });
     };
@@ -86,7 +91,7 @@ const EditTeacher = ({ navigation }) => {
                     onValueChange={(itemValue) => setPickerValue(itemValue)}
                 >
                     <Picker.Item label="English" value="English" />
-                    <Picker.Item label="Math" value="Math" />
+                    <Picker.Item label="Maths" value="Maths" />
                     <Picker.Item label="Computer" value="Computer" />
                     <Picker.Item label="Physics" value="Physics" />
                     <Picker.Item label="Chemistry" value="Chemistry" />
@@ -94,7 +99,11 @@ const EditTeacher = ({ navigation }) => {
                 </Picker>
             </View>
             <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                <Text style={styles.saveButtonText}>Save Changes</Text>
+                {isLoading ? (
+                    <ActivityIndicator color="#fff" /> // Show activity indicator when isLoading is true
+                ) : (
+                    <Text style={styles.saveButtonText}>Save Changes</Text>
+                )}
             </TouchableOpacity>
         </View>
     );

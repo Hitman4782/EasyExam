@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, Alert } from 'react-native';
 import { Button, Text, Title, TextInput as PaperTextInput } from 'react-native-paper';
 import { firebase } from '../firebase/config';
 
@@ -80,25 +80,30 @@ class MCQUpload extends Component {
     const { docName, mcqs } = this.state;
     const { route } = this.props;
     const { subject, className } = route.params;
-
+  
     if (!subject || !className) {
       console.error('Error: Subject or class name is missing.');
       return;
     }
-
+  
     const mcqData = mcqs.map((mcq) => ({
       question: mcq.question,
       options: [mcq.optionA, mcq.optionB, mcq.optionC, mcq.optionD],
       correctAnswer: mcq.correctAnswer,
     }));
+  
     const questionRef = firebase.firestore().collection('subjects').doc(subject);
     const subjectRef = questionRef.collection(className).doc(docName);
-
+  
+    const uniqueId = Math.floor(10000 + Math.random() * 90000); // Generate a 5-digit random number
+  
     subjectRef
       .set({
+        id: uniqueId, // Store the unique ID
         mcqs: mcqData,
       })
       .then(() => {
+        Alert.alert('MCQs uploaded successfully!');
         console.log('MCQs uploaded successfully!');
         this.setState({ mcqs: [] });
       })
@@ -106,6 +111,7 @@ class MCQUpload extends Component {
         console.error('Error uploading MCQs: ', error);
       });
   };
+  
 
   renderMCQInputs = () => {
     return this.state.mcqs.map((mcq, index) => (

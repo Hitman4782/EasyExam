@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { Button, RadioButton } from 'react-native-paper';
 import { firebase } from '../firebase/config';
 
@@ -14,6 +14,9 @@ class MCQExam extends Component {
       selectedAnswers: {},
       submitted: false,
       result: null,
+      id: null, // Added id field to state
+      userHasTakenExam: false // Added userHasTakenExam field to state
+      
     };
   }
 
@@ -25,13 +28,11 @@ class MCQExam extends Component {
   }
 
   fetchCollections = (subject, className) => {
-
-
     if (!subject || !className) {
       console.error('Invalid subject or className');
       return;
     }
-  
+
     const questionRef = firebase.firestore().collection('subjects').doc(subject);
     const subjectRef = questionRef.collection(className);
 
@@ -50,12 +51,12 @@ class MCQExam extends Component {
     const { selectedCollection } = this.state;
     const { route } = this.props;
     const { subject, className } = route.params;
-  
+
     if (!subject || !className || !selectedCollection) {
       console.error('Invalid subject, className, or selectedCollection');
       return;
     }
-  
+
     const questionRef = firebase.firestore().collection('subjects').doc(subject);
     const subjectRef = questionRef.collection(className);
 
@@ -69,7 +70,10 @@ class MCQExam extends Component {
           mcqs.forEach((mcq, index) => {
             selectedAnswers[index] = null;
           });
-          this.setState({ mcqs, selectedAnswers });
+          const id = doc.data().id; // Fetch the ID from the document
+          this.setState({ mcqs, selectedAnswers, id }, () => {
+            this.checkUserExamStatus(); // Added call to check user's exam status
+          }); 
         }
       })
       .catch((error) => {
@@ -77,7 +81,24 @@ class MCQExam extends Component {
       });
   };
 
-  
+  checkUserExamStatus = () => {
+    const { id } = this.state;
+    const { email } = firebase.auth().currentUser;
+    const resultRef = firebase.firestore().collection('results');
+
+    resultRef
+      .where('id', '==', id) // Query for results with matching id
+      .where('email', '==', email) // Query for results with matching email
+      .get()
+      .then((querySnapshot) => {
+        if (!querySnapshot.empty) {
+          this.setState({ userHasTakenExam: true }); // Set userHasTakenExam to true if a result exists
+        }
+      })
+      .catch((error) => {
+        console.error('Error fetching user exam status: ', error);
+      });
+  };
 
   handleCollectionChange = (value) => {
     this.setState({ selectedCollection: value }, () => {
@@ -92,7 +113,7 @@ class MCQExam extends Component {
   };
 
   handleSubmit = () => {
-    const { mcqs, selectedAnswers } = this.state;
+    const { mcqs, selectedAnswers, id } = this.state;
 
     const result = mcqs.reduce((total, mcq, index) => {
       const selectedAnswer = selectedAnswers[index];
@@ -116,7 +137,7 @@ class MCQExam extends Component {
       .then((doc) => {
         if (doc.exists) {
           // Get the rollNumber and fullName from the user document
-          const { rollNumber, fullName, class: userClass} = doc.data();
+          const { rollNumber, fullName, class: userClass } = doc.data();
 
           // Create a new document in the "results" collection with an auto-generated ID
           const resultRef = firebase.firestore().collection('results').doc();
@@ -124,6 +145,7 @@ class MCQExam extends Component {
           // Set the fields of the result document
           resultRef
             .set({
+              id,
               selectedCollection,
               result: `${result}/${mcqs.length}`,
               date: new Date(),
@@ -148,7 +170,6 @@ class MCQExam extends Component {
         console.error('Error fetching user document: ', error);
       });
   };
-  
 
   renderCollections = () => {
     return this.state.collections.map((collection, index) => (
@@ -165,7 +186,7 @@ class MCQExam extends Component {
 
   renderMCQs = () => {
     const { mcqs, selectedAnswers, submitted } = this.state;
-  
+
     if (mcqs.length === 0) {
       // Display activity indicator when MCQs are being loaded
       return (
@@ -174,7 +195,7 @@ class MCQExam extends Component {
         </View>
       );
     }
-  
+
     return mcqs.map((mcq, index) => (
       <View key={index} style={styles.mcqContainer}>
         <Text style={styles.mcqQuestion}>{mcq.question}</Text>
@@ -182,7 +203,7 @@ class MCQExam extends Component {
           const selectedAnswer = selectedAnswers[index];
           const isWrongAnswer = submitted && selectedAnswer !== mcq.correctAnswer;
           const optionStyle = isWrongAnswer ? styles.wrongOptionText : styles.optionText;
-  
+
           return (
             <View key={optionIndex} style={styles.optionContainer}>
               <RadioButton.Group
@@ -204,9 +225,7 @@ class MCQExam extends Component {
       </View>
     ));
   };
-  
-  
-  
+
   renderResult = () => {
     const { mcqs, selectedAnswers, result } = this.state;
 
@@ -222,54 +241,57 @@ class MCQExam extends Component {
   };
 
   render() {
-    const { selectedCollection, mcqs, submitted, result } = this.state;
-
+    const { selectedCollection, mcqs, submitted, result, userHasTakenExam } = this.state;
+  
     return (
       <ScrollView style={styles.container}>
         <Text style={styles.title}>MCQ Exam</Text>
-
+  
         {!selectedCollection ? (
           <View>
             <Text style={styles.subtitle}>Select a Collection:</Text>
             {this.renderCollections()}
           </View>
+        ) : userHasTakenExam ? ( // Render already submitted message if user has taken the exam
+          <View>
+            <Text style={styles.taken}>You have already submitted the exam.</Text>
+          </View>
+        ) : mcqs.length === 0 ? ( // Display activity indicator when MCQs are being loaded
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#20688d" />
+          </View>
         ) : (
           <View>
             <Text style={styles.subtitle}>MCQs:</Text>
-            {mcqs.length > 0 ? (
-              <View>
-                {this.renderMCQs()}
-                {!submitted ? (
-                  <Button
-                    mode="contained"
-                    style={styles.submitButton}
-                    onPress={this.handleSubmit}
-                  >
-                    Submit
-                  </Button>
-                ) : (
-                  <View>
-                    <Text style={styles.resultTitle}>Result:</Text>
-                    <Text style={styles.resultText}>{`You scored ${result}`}</Text>
-                    {this.renderResult()}
-                  </View>
-                )}
-              </View>
+            {this.renderMCQs()}
+            {!submitted ? (
+              <Button
+                mode="contained"
+                style={styles.submitButton}
+                onPress={this.handleSubmit}
+              >
+                Submit
+              </Button>
             ) : (
-              <Text style={styles.noMCQsText}>loading</Text>
+              <View>
+                <Text style={styles.resultTitle}>Result:</Text>
+                <Text style={styles.resultText}>{`You scored ${result}`}</Text>
+                {this.renderResult()}
+              </View>
             )}
           </View>
         )}
       </ScrollView>
     );
   }
+  
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#F2F6FF'
+    backgroundColor: '#F2F6FF',
   },
   loadingContainer: {
     flex: 1,
@@ -286,9 +308,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 16,
   },
+  taken: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center'
+  },
   collectionButton: {
     marginBottom: 8,
-    backgroundColor:'#20688d'
+    backgroundColor: '#20688d',
   },
   mcqContainer: {
     marginBottom: 16,
@@ -335,7 +363,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: 16,
-    backgroundColor:'#20688d'
+    backgroundColor: '#20688d',
   },
 });
 

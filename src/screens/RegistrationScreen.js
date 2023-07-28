@@ -19,12 +19,11 @@ export default function RegistrationScreen({ navigation }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [userType, setUserType] = useState('');
   const [homeScreen, setHomeScreen] = useState('');
-  const [selectedYear, setSelectedYear] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // New state for loading indicator
+  const [selectedYear, setSelectedYear] = useState(null); // Updated to null
+  const [selectedSubject, setSelectedSubject] = useState(null); // Updated to null
+  const [isLoading, setIsLoading] = useState(false);
   const [rollNumber, setRollNumber] = useState('');
   const [employeeNumber, setEmployeeNumber] = useState('');
-
 
   const onFooterLinkPress = () => {
     navigation.navigate('Login');
@@ -40,58 +39,58 @@ export default function RegistrationScreen({ navigation }) {
       alert("Passwords don't match.");
       return;
     }
-  
+
     if (!userType) {
       alert('Please select a user type.');
       return;
     }
-  
+
     // Basic email validation
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
       alert('Please enter a valid email address.');
       return;
     }
-  
+
     // Basic password validation
     if (!password || password.length < 6) {
       alert('Please enter a password with at least 6 characters.');
       return;
     }
-  
+
     // Basic full name validation
     if (!fullName) {
       alert('Please enter your full name.');
       return;
     }
-  
+
     // Additional field validations for student
     if (userType === 'student') {
       if (!rollNumber) {
         alert('Please enter your roll number.');
         return;
       }
-  
+
       if (!selectedYear) {
         alert('Please select your class.');
         return;
       }
     }
-  
+
     // Additional field validations for teacher
     if (userType === 'teacher') {
       if (!employeeNumber) {
         alert('Please enter your employee number.');
         return;
       }
-  
+
       if (!selectedSubject) {
         alert('Please select your subject.');
         return;
       }
     }
-  
-    setIsLoading(true); // Start the loading indicator
-  
+
+    setIsLoading(true);
+
     firebase
       .auth()
       .createUserWithEmailAndPassword(email, password)
@@ -111,26 +110,26 @@ export default function RegistrationScreen({ navigation }) {
           .doc(uid)
           .set(data)
           .then(() => {
-            setIsLoading(false); // Stop the loading indicator
+            setIsLoading(false);
             navigation.replace(homeScreen, { user: data });
           })
           .catch((error) => {
-            setIsLoading(false); // Stop the loading indicator
+            setIsLoading(false);
             alert(error);
           });
       })
       .catch((error) => {
-        setIsLoading(false); // Stop the loading indicator
+        setIsLoading(false);
         alert(error);
       });
   };
-  
 
   return (
     <View style={styles.container}>
       <KeyboardAwareScrollView
         style={{ flex: 1, width: '100%' }}
-        keyboardShouldPersistTaps="always">
+        keyboardShouldPersistTaps="always"
+      >
         <Image style={styles.logo} source={require('../../assets/icon.png')} />
         <View style={styles.centerContainer}>
           <Text style={styles.title}>Register as:</Text>
@@ -140,12 +139,14 @@ export default function RegistrationScreen({ navigation }) {
                 styles.userTypeButton,
                 userType === 'student' && styles.selectedUserTypeButton,
               ]}
-              onPress={() => onUserTypeSelect('student')}>
+              onPress={() => onUserTypeSelect('student')}
+            >
               <Text
                 style={[
                   styles.userTypeButtonText,
                   userType === 'student' && styles.selectedUserTypeButtonText,
-                ]}>
+                ]}
+              >
                 Student
               </Text>
             </TouchableOpacity>
@@ -154,12 +155,14 @@ export default function RegistrationScreen({ navigation }) {
                 styles.userTypeButton,
                 userType === 'teacher' && styles.selectedUserTypeButton,
               ]}
-              onPress={() => onUserTypeSelect('teacher')}>
+              onPress={() => onUserTypeSelect('teacher')}
+            >
               <Text
                 style={[
                   styles.userTypeButtonText,
                   userType === 'teacher' && styles.selectedUserTypeButtonText,
-                ]}>
+                ]}
+              >
                 Teacher
               </Text>
             </TouchableOpacity>
@@ -231,11 +234,13 @@ export default function RegistrationScreen({ navigation }) {
 
               {userType === 'student' && (
                 <>
-                  <Text style={styles.label}>Select Class</Text>
+                  {/* <Text style={styles.label}>Select Class</Text> */}
                   <Picker
                     style={styles.input}
                     selectedValue={selectedYear}
-                    onValueChange={(itemValue) => setSelectedYear(itemValue)}>
+                    onValueChange={(itemValue) => setSelectedYear(itemValue)}
+                  >
+                    <Picker.Item label="Select Class" value={null} />
                     <Picker.Item label="9th" value="9th" />
                     <Picker.Item label="10th" value="10th" />
                     <Picker.Item label="1st Year" value="1st Year" />
@@ -246,13 +251,15 @@ export default function RegistrationScreen({ navigation }) {
 
               {userType === 'teacher' && (
                 <>
-                  <Text style={styles.label}>Select Subject</Text>
+                  {/* <Text style={styles.label}>Select Subject</Text> */}
                   <Picker
                     style={styles.input}
                     selectedValue={selectedSubject}
-                    onValueChange={(itemValue) => setSelectedSubject(itemValue)}>
+                    onValueChange={(itemValue) => setSelectedSubject(itemValue)}
+                  >
+                    <Picker.Item label="Select Subject" value={null} />
                     <Picker.Item label="English" value="English" />
-                    <Picker.Item label="Math" value="Math" />
+                    <Picker.Item label="Maths" value="Maths" />
                     <Picker.Item label="Computer" value="Computer" />
                     <Picker.Item label="Physics" value="Physics" />
                     <Picker.Item label="Chemistry" value="Chemistry" />
@@ -264,7 +271,8 @@ export default function RegistrationScreen({ navigation }) {
               <TouchableOpacity
                 style={styles.button}
                 onPress={() => onRegisterPress()}
-                disabled={isLoading}>
+                disabled={isLoading}
+              >
                 {isLoading ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (

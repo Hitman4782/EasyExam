@@ -64,6 +64,16 @@ const HomeScreen = () => {
     navigation.navigate('MCQ Paper', { className, subject });
   };
 
+  const Extra = [
+    { name: 'Announcements', color: '#20688d', icon: 'bullhorn' },
+  ];
+
+  const handleExtraPress = () => {
+    navigation.navigate('Add Announcement');
+  };
+
+
+
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
@@ -87,6 +97,21 @@ const HomeScreen = () => {
               key={classItem.name}
               style={[styles.card, { backgroundColor: classItem.color }]}
               onPress={() => handleClassesPress(classItem.name)}
+            >
+              <Card.Content style={styles.cardContent}>
+                <Icon name={classItem.icon} size={24} color="white" style={styles.icon} />
+                <Title style={styles.cardText}>{classItem.name}</Title>
+              </Card.Content>
+            </Card>
+          ))}
+        </View>
+        <Text style={styles.subTitle1}>Extras:</Text>
+        <View style={styles.classes}>
+          {Extra.map((classItem) => (
+            <Card
+              key={classItem.name}
+              style={[styles.card1, { backgroundColor: classItem.color }]}
+              onPress={() => handleExtraPress(classItem.name)}
             >
               <Card.Content style={styles.cardContent}>
                 <Icon name={classItem.icon} size={24} color="white" style={styles.icon} />
@@ -163,6 +188,16 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '48%',
+    marginBottom: 16,
+    borderRadius: 8,
+    elevation: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  card1: {
+    width: '60%',
     marginBottom: 16,
     borderRadius: 8,
     elevation: 4,

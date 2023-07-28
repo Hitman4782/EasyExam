@@ -70,24 +70,32 @@ const HomeScreen = () => {
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
+        const userClass = userDetails?.class;
+        // if (!userClass) {
+        //   console.error('Invalid user class');
+        //   return;
+        // }
+  
         const announcementsSnapshot = await firebase
           .firestore()
           .collection('announcements')
+          .where('classSection', '==', userClass)
           .get();
-
+  
         const announcementsData = [];
         announcementsSnapshot.forEach((doc) => {
           announcementsData.push(doc.data());
         });
-
+  
         setAnnouncements(announcementsData);
       } catch (error) {
         console.log('Error fetching announcements:', error);
       }
     };
-
+  
     fetchAnnouncements();
-  }, []);
+  }, [userDetails]);
+  
 
   const subjects = [
     { name: 'English', icon: 'book', color: '#20688d' },

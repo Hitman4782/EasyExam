@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Image,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
@@ -19,6 +20,9 @@ export default function LoginScreen({ navigation }) {
   const [homeScreen, setHomeScreen] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const loginButtonRef = useRef(null);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+
 
   useEffect(() => {
     // Check if user previously selected "Stay Logged In"
@@ -27,16 +31,28 @@ export default function LoginScreen({ navigation }) {
         setRememberMe(value === 'true');
       }
     });
-    // Check if email and password were previously stored
-    AsyncStorage.multiGet(['email', 'password']).then((values) => {
+    // Check if email, password, and userType were previously stored
+    AsyncStorage.multiGet(['email', 'password', 'userType']).then((values) => {
       const storedEmail = values[0][1];
       const storedPassword = values[1][1];
-      if (storedEmail && storedPassword) {
+      const storedUserType = values[2][1];
+      if (storedEmail && storedPassword && storedUserType) {
         setEmail(storedEmail);
         setPassword(storedPassword);
+        setUserType(storedUserType);
+        setHomeScreen(storedUserType === 'student' ? 'StudentHomeScreen' : 'TeacherHomeScreen');
+        if (rememberMe) {
+          login(storedEmail, storedPassword, storedUserType);
+        }
       }
     });
   }, []);
+
+  useEffect(() => {
+    if (rememberMe) {
+      loginButtonRef.current?.props?.onPress(); // Trigger login button press
+    }
+  }, [rememberMe]);
 
   const onFooterLinkPress = () => {
     navigation.navigate('Register');
@@ -52,24 +68,7 @@ export default function LoginScreen({ navigation }) {
     AsyncStorage.setItem('rememberMe', (!rememberMe).toString());
   };
 
-  const onLoginPress = () => {
-    if (!userType) {
-      alert('Please select a user type.');
-      return;
-    }
-
-    // Basic email validation
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      alert('Please enter a valid email address.');
-      return;
-    }
-
-    // Basic password validation
-    if (!password || password.length < 6) {
-      alert('Please enter a password with at least 6 characters.');
-      return;
-    }
-
+  const login = (email, password, userType) => {
     setIsLoading(true);
 
     firebase
@@ -90,14 +89,6 @@ export default function LoginScreen({ navigation }) {
             }
             const user = firestoreDocument.data();
 
-            // Store email and password if "Stay Logged In" is selected
-            if (rememberMe) {
-              AsyncStorage.multiSet([
-                ['email', email],
-                ['password', password],
-              ]);
-            }
-
             navigation.replace(homeScreen, { user });
           })
           .catch((error) => {
@@ -111,16 +102,64 @@ export default function LoginScreen({ navigation }) {
       });
   };
 
+  const handleForgotPassword = () => {
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+
+    firebase
+      .auth()
+      .sendPasswordResetEmail(email)
+      .then(() => {
+        Alert.alert(
+          'Password Reset Email Sent',
+          'An email with instructions to reset your password has been sent to your email address.'
+        );
+      })
+      .catch((error) => {
+        Alert.alert('Password Reset Failed', error.message);
+      });
+  };
+
+
+  const onLoginPress = () => {
+    if (!userType) {
+      alert('Please select a user type.');
+      return;
+    }
+
+    // Basic email validation
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      alert('Please enter a valid email address.');
+      return;
+    }
+
+    // Basic password validation
+    if (!password || password.length < 6) {
+      alert('Please enter a password with at least 6 characters.');
+      return;
+    }
+
+    // Store email, password, and userType if "Stay Logged In" is selected
+    if (rememberMe) {
+      AsyncStorage.multiSet([
+        ['email', email],
+        ['password', password],
+        ['userType', userType],
+      ]);
+    }
+
+    login(email, password, userType);
+  };
+
   return (
     <View style={styles.container}>
       <KeyboardAwareScrollView
         style={{ flex: 1, width: '100%' }}
         keyboardShouldPersistTaps="always"
       >
-        <Image
-          style={styles.logo}
-          source={require('../../assets/icon.png')}
-        />
+        <Image style={styles.logo} source={require('../../assets/icon.png')} />
         <View style={styles.centerContainer}>
           <Text style={styles.title}>Login as:</Text>
           <View style={styles.userTypeContainer}>
@@ -188,12 +227,13 @@ export default function LoginScreen({ navigation }) {
                 >
                   {rememberMe && <View style={styles.checkboxTick} />}
                 </TouchableOpacity>
-                <Text style={styles.checkboxText}>Stay Logged In</Text>
+                <Text style={styles.checkboxText}>Save Credentials</Text>
               </View>
 
               <TouchableOpacity
+                ref={loginButtonRef}
                 style={styles.button}
-                onPress={() => onLoginPress()}
+                onPress={onLoginPress}
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -210,6 +250,12 @@ export default function LoginScreen({ navigation }) {
                     Sign up
                   </Text>
                 </Text>
+              </View>
+              <View style={styles.forgotPasswordContainer}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                <TouchableOpacity onPress={handleForgotPassword}>
+                  <Text style={styles.forgotPasswordLink}>Reset Now</Text>
+                </TouchableOpacity>
               </View>
             </>
           )}
@@ -328,5 +374,20 @@ const styles = StyleSheet.create({
   checkboxText: {
     fontSize: 16,
     color: '#2e2e2d',
+  },
+  forgotPasswordContainer: {
+    flexDirection: 'row',
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  forgotPasswordText: {
+    fontSize: 16,
+    color: '#2e2e2d',
+    marginRight: 5,
+  },
+  forgotPasswordLink: {
+    fontSize: 16,
+    color: '#20688d',
+    fontWeight: 'bold',
   },
 });
